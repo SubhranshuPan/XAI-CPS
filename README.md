@@ -28,11 +28,11 @@ We transition from theoretical design to a functional "Glass Box" software proto
 *(Note: Replace the file paths below with the actual paths in your GitHub `/assets/` folder)*
 
 ### The "Glass Box" Interface
-![Streamlit Interface](assets/interface_screenshot.png)
+![Streamlit Interface](assets/S1.png)
 *Real-time CPS sensor telemetry visualization showing normal operations and injected anomaly windows.*
 
 ### XAI Comparison: Context-Agnostic vs. Context-Aware
-![XAI Explanations](assets/xai_comparison.png)
+![XAI Explanations](assets/S2.png)
 *The multi-agent system successfully identifies that the pump vibration is caused by storm-induced network latency, whereas traditional XAI incorrectly diagnoses an imminent mechanical failure.*
 
 ## 🚀 Getting Started (Running Locally)
