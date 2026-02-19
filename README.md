@@ -42,3 +42,43 @@ We transition from theoretical design to a functional "Glass Box" software proto
 2. Install [Ollama](https://ollama.com/) and download the Llama 3.2 model:
    ```bash
    ollama run llama3.2
+   ```
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/yourusername/glass-box-xai-cps.git](https://github.com/yourusername/glass-box-xai-cps.git)
+   cd glass-box-xai-cps
+   ```
+2. Install the required dependencies:
+   ```bash
+   pip install streamlit pandas plotly ag2[openai]
+   ```
+
+### Execution
+1. Ensure the Ollama application is running in the background.
+2. Launch the Streamlit dashboard:
+   ```bash
+   streamlit run code/app.py
+   ```
+3. Open the provided local URL (usually ```http://localhost:8501```) in your browser. Click the "🚨 Run Anomaly Detection & XAI Analysis" button to trigger the local Llama 3.2 multi-agent analysis.
+
+## 📊 Phase 2: Human-Centered Evaluation
+As part of this framework, the prototype's outputs were subjected to a human-centered evaluation using a 5-point Likert scale. Domain experts evaluated the contrasting explanations based on:
+1. **Reasonableness**
+2. **Trust**
+3. **Actionability**
+
+Our empirical data demonstrates that context-aware explanations significantly increase user trust and operational actionability in simulated industrial crises.
+
+## 👥 Authors & Acknowledgements
+### Researchers
+* Subhranshu Panda (Dept. of Computer Science Engineering, IIIT Bhubaneswar)
+* Shreyansh Gupta (Dept. of Computer Science Engineering, IIIT Bhubaneswar)
+
+### Project Guide:
+* Prof. Bharati Mishra (IIIT Bhubaneswar)
+
+This project was completed in partial fulfillment of the requirements for the degree of Bachelor of Technology in Computer Science Engineering.
+
+***
+
