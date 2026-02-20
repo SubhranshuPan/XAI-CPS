@@ -40,16 +40,20 @@ We transition from theoretical design to a functional "Glass Box" software proto
 ### Prerequisites
 1. Install [Python 3.9+](https://www.python.org/downloads/).
 2. Install [Ollama](https://ollama.com/) and download the Llama 3.2 model:
+   
    ```bash
    ollama run llama3.2
    ```
 ### Installation
 1. Clone the repository:
+   
    ```bash
    git clone [https://github.com/yourusername/glass-box-xai-cps.git](https://github.com/yourusername/glass-box-xai-cps.git)
    cd glass-box-xai-cps
    ```
-2. Install the required dependencies:
+   
+3. Install the required dependencies:
+   
    ```bash
    pip install streamlit pandas plotly ag2[openai]
    ```
@@ -57,10 +61,12 @@ We transition from theoretical design to a functional "Glass Box" software proto
 ### Execution
 1. Ensure the Ollama application is running in the background.
 2. Launch the Streamlit dashboard:
+   
    ```bash
    streamlit run code/app.py
    ```
-3. Open the provided local URL (usually ```http://localhost:8501```) in your browser. Click the "🚨 Run Anomaly Detection & XAI Analysis" button to trigger the local Llama 3.2 multi-agent analysis.
+   
+4. Open the provided local URL (usually ```http://localhost:8501```) in your browser. Click the "🚨 Run Anomaly Detection & XAI Analysis" button to trigger the local Llama 3.2 multi-agent analysis.
 
 ## 📊 Phase 2: Human-Centered Evaluation
 As part of this framework, the prototype's outputs were subjected to a human-centered evaluation using a 5-point Likert scale. Domain experts evaluated the contrasting explanations based on:
