@@ -20,7 +20,7 @@ We transition from theoretical design to a functional "Glass Box" software proto
 
 ## 📂 Repository Structure
 * `/code/` - Contains the Python scripts for the Streamlit dashboard and AutoGen multi-agent system (`app.py`).
-* `/report/` - Contains the full LaTeX source code and the compiled 8th-semester project PDF (`TW_Project_Report_new.pdf`).
+* `/report/` - Contains the compiled 8th-semester project PDF (`TW_Project_Report_new.pdf`).
 * `/assets/` - Contains dashboard screenshots, output images, and architectural diagrams used in the evaluation phase.
 
 ## 📸 Dashboard & Outputs
