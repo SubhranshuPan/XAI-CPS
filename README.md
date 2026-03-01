@@ -28,7 +28,6 @@ We transition from theoretical design to a functional "Glass Box" software proto
 
 ## 📸 Dashboard & Outputs
 
-*(Note: Replace the file paths below with the actual paths in your GitHub `/assets/` folder)*
 
 ### The "Glass Box" Interface
 ![Streamlit Interface](assets/S1.png)
