@@ -10,16 +10,19 @@ The integration of Artificial Intelligence (AI) and Cyber-Physical Systems (CPS)
 
 This repository contains the empirical implementation and research report for our B.Tech project. It addresses a critical failure in current Explainable AI (XAI) methods—a **lack of context-awareness**—by proposing and implementing a novel, human-centered methodological framework. 
 
-We transition from theoretical design to a functional "Glass Box" software prototype, simulating a Smart Water Treatment System to demonstrate how context-aware AI outperforms traditional context-agnostic models.
+We transition from theoretical design to a functional "Glass Box" software prototype. To prove scalability, the system is evaluated on a robust, synthesized dataset of **1,000 time-series samples** representing a Smart Water Treatment System, demonstrating how context-aware AI outperforms traditional context-agnostic models in real-world pipelines.
 
 ## ✨ Key Features
+* **Large-Scale Simulation & Hybrid Pipeline:** Replicates a real-world industrial pipeline by applying algorithmic anomaly detection across a 1,000-sample dataset, followed by dynamic LLM-based explanations for flagged anomalies.
 * **Multi-Agent Architecture:** Utilizes Microsoft AutoGen to orchestrate multiple AI agents (a CPS Monitor and an XAI Explainer) to analyze sensor telemetry autonomously.
 * **100% Local & Secure Data Processing:** Addresses the privacy and cybersecurity vulnerabilities of cloud APIs by running **Llama 3.2** entirely offline via Ollama.
 * **Context-Aware Explanations:** Correlates internal physical sensor deviations (e.g., pressure drops, vibration spikes) with external environmental contexts (e.g., weather, network latency).
-* **Human-Centered Dashboard:** A Streamlit-based interface that contrasts traditional XAI outputs directly against our proposed context-aware framework for objective human evaluation.
+* **Human-Centered Dashboard:** A Streamlit-based interface that visualizes massive telemetry data and contrasts traditional XAI outputs directly against our proposed context-aware framework for objective human evaluation.
 
 ## 📂 Repository Structure
-* `/code/` - Contains the Python scripts for the Streamlit dashboard and AutoGen multi-agent system (`app.py`).
+* `/code/` - Contains the Python scripts:
+  * `app.py`: The Streamlit dashboard and AutoGen multi-agent system.
+  * `generate_dataset.py`: The data generation script used to synthesize the 1,000-sample telemetry and contextual dataset.
 * `/report/` - Contains the compiled 8th-semester project PDF (`TW_Project_Report_new.pdf`).
 * `/assets/` - Contains dashboard screenshots, output images, and architectural diagrams used in the evaluation phase.
 
@@ -29,10 +32,11 @@ We transition from theoretical design to a functional "Glass Box" software proto
 
 ### The "Glass Box" Interface
 ![Streamlit Interface](assets/S1.png)
-*Real-time CPS sensor telemetry visualization showing normal operations and injected anomaly windows.*
-
+*Real-time CPS sensor telemetry visualization across 1,000 samples, dynamically highlighting detected mechanical and contextual anomalies.*
+![Detected Anomalies](assets/S3.png)
+*Across multiple timestamps various anomalies detected through CPS Telemetry Data Analysis.*
 ### XAI Comparison: Context-Agnostic vs. Context-Aware
-![XAI Explanations](assets/S2.png)
+![XAI Explanations](assets/S4.png)
 *The multi-agent system successfully identifies that the pump vibration is caused by storm-induced network latency, whereas traditional XAI incorrectly diagnoses an imminent mechanical failure.*
 
 ## 🚀 Getting Started (Running Locally)
@@ -59,8 +63,13 @@ We transition from theoretical design to a functional "Glass Box" software proto
    ```
 
 ### Execution
-1. Ensure the Ollama application is running in the background.
-2. Launch the Streamlit dashboard:
+
+1. **Generate The Dataset** : First Synthesize the 1000-sample telemetry dataset by running the generation script:
+   ```bash
+   python code/generate_dataset.py
+   ```
+2. Ensure the Ollama application is running in the background.
+3. Launch the Streamlit dashboard:
    
    ```bash
    streamlit run code/app.py
