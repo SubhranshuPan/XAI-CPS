@@ -91,7 +91,7 @@ if st.button("Run XAI Pipeline & Auto-Eval"):
         Anomaly detected at {selected_time}.
         - Water Pressure: {row_data['Water_Pressure_psi']:.2f} psi
         - Pump Vibration: {row_data['Pump_Vibration_mms']:.2f} mm/s
-        - Weather Context: {row_data['Weather_Context']}
+        - External Context: {row_data['External_Context']}
         - Network Latency: {row_data['Network_Latency_ms']:.2f} ms
         """
 
@@ -117,7 +117,7 @@ if st.button("Run XAI Pipeline & Auto-Eval"):
         # --- AGENT 1b: Context-Aware Explainer ---
         aware_sys_msg = """You are an Explainable AI system for a Cyber-Physical System.
         Your task is to provide a context-aware explanation for the provided anomaly.
-        Link the internal sensor failures to the External Weather and Network Latency Context.
+        Link the internal sensor failures to the External Context and Network Latency.
         
         Strictly format your response exactly like this:
         

@@ -17,16 +17,20 @@ weather = ['Clear'] * num_samples
 latency = np.random.normal(20, 5, num_samples)    # Normal latency ~ 20 ms
 anomaly_type = ['None'] * num_samples
 
-# Inject Contextual Anomalies (Storms causing network lag -> system overcompensates)
-# Let's inject 3 storms, each lasting about 10 samples (2.5 hours)
-storm_indices = [150, 500, 850]
-for idx in storm_indices:
+# Inject Contextual Anomalies (e.g., Storms causing network lag, heatwaves causing thermal expansion, maintenance causing routing disruptions)
+# Let's inject 3 diverse contextual anomalies, each lasting about 10 samples (2.5 hours)
+contextual_events = [
+    (150, 'Heavy Storm', 'Contextual (Storm)'),
+    (500, 'Severe Heat Wave', 'Contextual (Thermal Stress)'),
+    (850, 'Scheduled Network Maintenance', 'Contextual (Routing Disruption)')
+]
+for idx, ext_ctx, anomaly_lbl in contextual_events:
     for i in range(10):
-        weather[idx + i] = 'Heavy Storm'
+        weather[idx + i] = ext_ctx
         latency[idx + i] = np.random.normal(200, 30) # High latency
-        pressure[idx + i] = np.random.normal(28, 2)  # Pressure drops due to lag
+        pressure[idx + i] = np.random.normal(28, 2)  # Pressure drops due to lag/environmental stress
         vibration[idx + i] = np.random.normal(6.5, 0.5) # Pump works harder -> high vibration
-        anomaly_type[idx + i] = 'Contextual (Storm)'
+        anomaly_type[idx + i] = anomaly_lbl
 
 # Inject Real Mechanical Anomalies (No storm, pump just breaks)
 # Let's inject 2 real failures
@@ -42,11 +46,11 @@ df = pd.DataFrame({
     'Timestamp': timestamps,
     'Water_Pressure_psi': pressure,
     'Pump_Vibration_mms': vibration,
-    'Weather_Context': weather,
+    'External_Context': weather,
     'Network_Latency_ms': latency,
     'Ground_Truth_State': anomaly_type
 })
 
 # Save to CSV
 df.to_csv('smart_water_telemetry_1000.csv', index=False)
-print("✅ Successfully generated 'smart_water_telemetry_1000.csv' with 1000 samples!")
+print("Successfully generated 'smart_water_telemetry_1000.csv' with 1000 samples!")
