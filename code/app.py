@@ -72,23 +72,26 @@ fig.add_scatter(x=anomalies['Timestamp'], y=anomalies['Pump_Vibration_mms'],
 st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("🚨 Detected Anomalous Events")
-st.dataframe(anomalies.head(10))
+st.dataframe(anomalies)
 
 # --- 4. MULTI-AGENT XAI TRIGGER ---
 st.markdown("---")
 st.write("### Run Multi-Agent Analysis & Expert Evaluation")
 
 # Let user pick an anomaly to explain
-anomaly_timestamps = anomalies['Timestamp'].tolist()
-selected_time = st.selectbox("Select an anomalous timestamp to explain:", anomaly_timestamps)
+anomaly_options = [f"ID {idx} - {row['Timestamp']}" for idx, row in anomalies.iterrows()]
+selected_option = st.selectbox("Select an anomalous event to explain:", anomaly_options)
 
 if st.button("Run XAI Pipeline & Auto-Eval"):
     with st.spinner("Agent 1 (Explainer) is analyzing the telemetry..."):
         
         # Extract the specific row data for the LLM
-        row_data = df[df['Timestamp'] == selected_time].iloc[0]
+        selected_id = int(selected_option.split(" ")[1])
+        row_data = df.loc[selected_id]
+        selected_time = row_data['Timestamp']
+        
         telemetry_prompt = f"""
-        Anomaly detected at {selected_time}.
+        Anomaly detected at {selected_time} (Event ID: {selected_id}).
         - Water Pressure: {row_data['Water_Pressure_psi']:.2f} psi
         - Pump Vibration: {row_data['Pump_Vibration_mms']:.2f} mm/s
         - External Context: {row_data['External_Context']}
