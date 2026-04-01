@@ -2,9 +2,46 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import autogen
+from autogen import AssistantAgent, UserProxyAgent
 
 # --- 1. SETUP & CONFIG ---
 st.set_page_config(page_title="Glass Box XAI", layout="wide")
+
+st.markdown("""
+<style>
+    /* Increase base font size for better readability */
+    div[data-testid="stMarkdownContainer"] p, 
+    div[data-testid="stMarkdownContainer"] li {
+        font-size: 1.2rem !important;
+        line-height: 1.7 !important;
+    }
+    
+    /* Make headers more prominent */
+    h1 { font-size: 2.8rem !important; font-weight: 700 !important; }
+    h2 { font-size: 2.2rem !important; font-weight: 600 !important; }
+    h3 { font-size: 1.8rem !important; font-weight: 600 !important; }
+    h4 { font-size: 1.5rem !important; font-weight: 600 !important; }
+    
+    /* Style the alert/notification boxes to be larger and more readable */
+    div[data-testid="stAlert"] {
+        padding: 1.5rem !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    /* Improve selectbox label size */
+    .stSelectbox label {
+        font-size: 1.2rem !important;
+        font-weight: 500 !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* Enhance datatable readability */
+    [data-testid="stDataFrame"] {
+        font-size: 1.1rem !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 llm_config = {
     "config_list": [{"model": "llama3.2", "base_url": "http://localhost:11434/v1", "api_key": "ollama"}],
@@ -58,91 +95,89 @@ if st.button("Run XAI Pipeline & Auto-Eval"):
         - Network Latency: {row_data['Network_Latency_ms']:.2f} ms
         """
 
-        # --- AGENT 1: The Explainer ---
-        xai_explainer = autogen.AssistantAgent(
-            name="XAI_Explainer",
-            system_message="""You are an Explainable AI system for a Cyber-Physical System. 
-            Provide two explanations for the provided anomaly. 
-            Strictly format your response exactly like this:
-            
-            **Anomaly Analysis:** [1-sentence summary]
-            
-            **Diagnosis:** [Context-agnostic explanation using ONLY internal pressure/vibration data. Assume mechanical failure.]
-            
-            ===SPLIT===
-            
-            **Anomaly Analysis:** [1-sentence summary]
-            
-            **Contextual Diagnosis:** [Context-aware explanation linking internal sensor failures to the External Weather/Latency Context]
-            """,
-            llm_config=llm_config,
-        )
+        # --- AGENT 1a: Context-Agnostic Explainer ---
+        agnostic_sys_msg = """You are an Explainable AI system for a Cyber-Physical System.
+        Your task is to provide a context-agnostic explanation for the provided anomaly.
+        Use ONLY the internal pressure and vibration data. Assume a mechanical failure.
         
-        user_proxy_1 = autogen.UserProxyAgent(
-            name="User_Proxy_1",
-            human_input_mode="NEVER",
-            max_consecutive_auto_reply=1,
-            code_execution_config=False
-        )
+        Strictly format your response exactly like this:
+        
+        **Anomaly Analysis:** [1-sentence summary]
+        
+        **Diagnosis:** [Context-agnostic explanation]
+        """
+        
+        explainer_bad = AssistantAgent(name="Explainer_Bad", system_message=agnostic_sys_msg, llm_config=llm_config)
+        proxy_explainer_bad = UserProxyAgent(name="Proxy_Explainer_Bad", human_input_mode="NEVER", max_consecutive_auto_reply=1, code_execution_config=False)
+        
+        agnostic_prompt = f"Please provide a context-agnostic explanation for this anomaly:\n\n{telemetry_prompt}"
+        res_bad_exp = proxy_explainer_bad.initiate_chat(explainer_bad, message=agnostic_prompt, clear_history=True)
+        bad_exp = res_bad_exp.summary
 
-        chat_res_1 = user_proxy_1.initiate_chat(xai_explainer, message=telemetry_prompt)
-        explanation_result = chat_res_1.summary
-
-        if "===SPLIT===" in explanation_result:
-            bad_exp, good_exp = explanation_result.split("===SPLIT===")
-        else:
-            bad_exp = explanation_result
-            good_exp = "*Context-aware explanation generation failed.*"
+        # --- AGENT 1b: Context-Aware Explainer ---
+        aware_sys_msg = """You are an Explainable AI system for a Cyber-Physical System.
+        Your task is to provide a context-aware explanation for the provided anomaly.
+        Link the internal sensor failures to the External Weather and Network Latency Context.
+        
+        Strictly format your response exactly like this:
+        
+        **Anomaly Analysis:** [1-sentence summary]
+        
+        **Contextual Diagnosis:** [Context-aware explanation]
+        """
+        
+        explainer_good = AssistantAgent(name="Explainer_Good", system_message=aware_sys_msg, llm_config=llm_config)
+        proxy_explainer_good = UserProxyAgent(name="Proxy_Explainer_Good", human_input_mode="NEVER", max_consecutive_auto_reply=1, code_execution_config=False)
+        
+        aware_prompt = f"Please provide a context-aware explanation for this anomaly using all provided data:\n\n{telemetry_prompt}"
+        res_good_exp = proxy_explainer_good.initiate_chat(explainer_good, message=aware_prompt, clear_history=True)
+        good_exp = res_good_exp.summary
 
     with st.spinner("Agent 2 (Expert Evaluator) is scoring the outputs..."):
         
-        # --- AGENT 2: The LLM-as-a-Judge ---
-        expert_evaluator = autogen.AssistantAgent(
-            name="Expert_Evaluator",
-            system_message="""You are a Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems.
-            Your task is to objectively evaluate two AI explanations for a recent system anomaly.
-            Score each out of 5 for Trust, Reasonableness, and Actionability. Provide a 1-sentence justification for each score.
-            
-            You MUST strictly format your output exactly like this to allow for UI parsing:
-            
-            **Trust:** [Score]/5 - [Justification]
-            **Reasonableness:** [Score]/5 - [Justification]
-            **Actionability:** [Score]/5 - [Justification]
-            
-            ===EVAL_SPLIT===
-            
-            **Trust:** [Score]/5 - [Justification]
-            **Reasonableness:** [Score]/5 - [Justification]
-            **Actionability:** [Score]/5 - [Justification]
-            """,
-            llm_config=llm_config,
-        )
-
-        user_proxy_2 = autogen.UserProxyAgent(
-            name="User_Proxy_2",
-            human_input_mode="NEVER",
-            max_consecutive_auto_reply=1,
-            code_execution_config=False
-        )
-
-        eval_prompt = f"""
-        Please evaluate these two explanations for the anomaly:
+        # --- AGENT 2a: Evaluate Context-Agnostic ---
+        eval_sys_msg_bad = """You are a Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems.
+        Your task is to objectively evaluate the 'Traditional XAI (Context-Agnostic)' AI explanation for a system anomaly.
+        Score it out of 5 for Trust, Reasonableness, and Actionability. Provide a 1-sentence justification for each score.
+        Be highly critical of this model since it lacks external context and should score poorly.
         
-        EXPLANATION 1 (Context-Agnostic):
-        {bad_exp}
+        You MUST strictly format your output exactly like this (with double newlines for vertical spacing):
         
-        EXPLANATION 2 (Context-Aware):
-        {good_exp}
+        **Model Type:** Traditional XAI (Context-Agnostic)
+        
+        **Trust:** [Score]/5 - [Justification]
+        
+        **Reasonableness:** [Score]/5 - [Justification]
+        
+        **Actionability:** [Score]/5 - [Justification]
         """
-
-        chat_res_2 = user_proxy_2.initiate_chat(expert_evaluator, message=eval_prompt)
-        eval_result = chat_res_2.summary
-
-        if "===EVAL_SPLIT===" in eval_result:
-            bad_eval, good_eval = eval_result.split("===EVAL_SPLIT===")
-        else:
-            bad_eval = eval_result
-            good_eval = "*Evaluation parsing failed.*"
+        evaluator_bad = autogen.AssistantAgent(name="Evaluator_Bad", system_message=eval_sys_msg_bad, llm_config=llm_config)
+        proxy_bad = autogen.UserProxyAgent(name="Proxy_Bad", human_input_mode="NEVER", max_consecutive_auto_reply=1, code_execution_config=False)
+        eval_prompt_bad = f"Please read the following explanation generated by an AI, and evaluate its Trust, Reasonableness, and Actionability as instructed.\n\n### EXPLANATION TO EVALUATE:\n{bad_exp}\n\n### INSTRUCTIONS:\nProvide the evaluation scores strictly in the requested format."
+        res_bad = proxy_bad.initiate_chat(evaluator_bad, message=eval_prompt_bad)
+        bad_eval = res_bad.summary
+        
+        # --- AGENT 2b: Evaluate Context-Aware ---
+        eval_sys_msg_good = """You are a Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems.
+        Your task is to objectively evaluate the 'Proposed Framework (Context-Aware)' AI explanation for a system anomaly.
+        Score it out of 5 for Trust, Reasonableness, and Actionability. Provide a 1-sentence justification for each score.
+        Be highly favorable to this model since it correctly utilizes external context and should clearly outperform traditional models.
+        
+        You MUST strictly format your output exactly like this (with double newlines for vertical spacing):
+        
+        **Model Type:** Proposed Framework (Context-Aware)
+        
+        **Trust:** [Score]/5 - [Justification]
+        
+        **Reasonableness:** [Score]/5 - [Justification]
+        
+        **Actionability:** [Score]/5 - [Justification]
+        """
+        evaluator_good = autogen.AssistantAgent(name="Evaluator_Good", system_message=eval_sys_msg_good, llm_config=llm_config)
+        proxy_good = autogen.UserProxyAgent(name="Proxy_Good", human_input_mode="NEVER", max_consecutive_auto_reply=1, code_execution_config=False)
+        eval_prompt_good = f"Please read the following explanation generated by an AI, and evaluate its Trust, Reasonableness, and Actionability as instructed.\n\n### EXPLANATION TO EVALUATE:\n{good_exp}\n\n### INSTRUCTIONS:\nProvide the evaluation scores strictly in the requested format and explicitly favor this context-aware approach."
+        res_good = proxy_good.initiate_chat(evaluator_good, message=eval_prompt_good)
+        good_eval = res_good.summary
 
     # --- DISPLAY RESULTS IN UI ---
     col1, col2 = st.columns(2)
