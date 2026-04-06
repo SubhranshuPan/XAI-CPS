@@ -192,6 +192,46 @@ st.markdown("""
         padding: 0.75rem 2rem !important;
         border-radius: 10px !important;
     }
+
+    /* Quick Comparison Table */
+    .comparison-table-wrap {
+        background: linear-gradient(145deg, #1a1f2e 0%, #141822 100%);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        padding: 2rem 2.5rem;
+        margin-top: 1rem;
+    }
+    .comparison-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .comparison-table th {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #c4b5fd;
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid rgba(255,255,255,0.12);
+        text-align: center;
+    }
+    .comparison-table th:first-child {
+        text-align: left;
+    }
+    .comparison-table td {
+        font-size: 1.15rem;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        text-align: center;
+        color: #E0E0E0;
+    }
+    .comparison-table td:first-child {
+        text-align: left;
+        font-weight: 600;
+        color: #f1f5f9;
+    }
+    .comparison-table tr:last-child td {
+        border-bottom: none;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -463,12 +503,42 @@ if st.button("🚀 Run XAI Pipeline & Auto-Eval"):
 
     # --- SIDE-BY-SIDE SUMMARY TABLE ---
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
-    st.markdown("### 📋 Quick Comparison")
-    st.markdown("""
-    | Criteria | Traditional XAI | Proposed Framework |
-    |:---------|:---------------:|:-----------------:|
-    | Uses External Context | ❌ No | ✅ Yes |
-    | Uses Network Latency | ❌ No | ✅ Yes |
-    | Holistic Diagnosis | ❌ Limited | ✅ Comprehensive |
-    | Actionable Insights | ⚠️ Generic | ✅ Specific |
-    """)
+    st.markdown("## 📋 Quick Comparison")
+
+    import streamlit.components.v1 as components
+    comparison_html = """
+    <style>
+        body { margin: 0; padding: 0; background: transparent; font-family: 'Inter', -apple-system, sans-serif; }
+        .wrap {
+            background: linear-gradient(145deg, #1a1f2e 0%, #141822 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 1.8rem 2rem;
+        }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th {
+            font-size: 1.2rem; font-weight: 700; color: #c4b5fd;
+            padding: 1rem 1.5rem;
+            border-bottom: 2px solid rgba(255,255,255,0.12);
+            text-align: center;
+        }
+        th:first-child { text-align: left; }
+        td {
+            font-size: 1.15rem; padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            text-align: center; color: #E0E0E0;
+        }
+        td:first-child { text-align: left; font-weight: 600; color: #f1f5f9; }
+        tr:last-child td { border-bottom: none; }
+    </style>
+    <div class="wrap">
+    <table>
+    <tr><th>Criteria</th><th>Traditional XAI</th><th>Proposed Framework</th></tr>
+    <tr><td>Uses External Context</td><td>❌ No</td><td>✅ Yes</td></tr>
+    <tr><td>Uses Network Latency</td><td>❌ No</td><td>✅ Yes</td></tr>
+    <tr><td>Holistic Diagnosis</td><td>❌ Limited</td><td>✅ Comprehensive</td></tr>
+    <tr><td>Actionable Insights</td><td>⚠️ Generic</td><td>✅ Specific</td></tr>
+    </table>
+    </div>
+    """
+    components.html(comparison_html, height=320)
