@@ -135,18 +135,22 @@ if st.button("Run XAI Pipeline & Auto-Eval"):
         row_data = df.loc[selected_id]
         selected_time = row_data['Timestamp']
         
-        telemetry_prompt = f"""
-        Anomaly detected at {selected_time} (Event ID: {selected_id}).
-        - Water Pressure: {row_data['Water_Pressure_psi']:.2f} psi
-        - Pump Vibration: {row_data['Pump_Vibration_mms']:.2f} mm/s
-        - External Context: {row_data['External_Context']}
-        - Network Latency: {row_data['Network_Latency_ms']:.2f} ms
-        """
+        # Build telemetry prompt dynamically from domain config
+        field_lines = []
+        for label, col, fmt, unit in config["telemetry_fields"]:
+            if fmt:
+                field_lines.append(f"        - {label}: {row_data[col]:{fmt}} {unit}")
+            else:
+                field_lines.append(f"        - {label}: {row_data[col]}")
+        telemetry_prompt = (
+            f"        Anomaly detected at {selected_time} (Event ID: {selected_id}).\n"
+            + "\n".join(field_lines)
+        )
 
         # --- AGENT 1a: Context-Agnostic Explainer ---
-        agnostic_sys_msg = """You are an Explainable AI system for a Cyber-Physical System.
+        agnostic_sys_msg = f"""You are an Explainable AI system for a Cyber-Physical System.
         Your task is to provide a context-agnostic explanation for the provided anomaly.
-        Use ONLY the internal pressure and vibration data. Assume a mechanical failure.
+        Use ONLY the internal {config['primary_sensors']} data. Assume a mechanical failure.
         
         Strictly format your response exactly like this:
         
@@ -163,8 +167,8 @@ if st.button("Run XAI Pipeline & Auto-Eval"):
         bad_exp = res_bad_exp.summary
 
         # --- AGENT 1b: Context-Aware Explainer ---
-        aware_sys_msg = """You are an Explainable AI system for a Cyber-Physical System.
-        Your task is to provide a context-aware explanation for the provided anomaly.
+        aware_sys_msg = f"""You are an Explainable AI system for a Cyber-Physical System.
+        Your task is to provide a context-aware explanation for the provided anomaly in a {config['system_label']}.
         Link the internal sensor failures to the External Context and Network Latency.
         
         Strictly format your response exactly like this:
@@ -184,8 +188,8 @@ if st.button("Run XAI Pipeline & Auto-Eval"):
     with st.spinner("Agent 2 (Expert Evaluator) is scoring the outputs..."):
         
         # --- AGENT 2a: Evaluate Context-Agnostic ---
-        eval_sys_msg_bad = """You are a Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems.
-        Your task is to objectively evaluate the 'Traditional XAI (Context-Agnostic)' AI explanation for a system anomaly.
+        eval_sys_msg_bad = f"""You are a {config['expert_persona']}.
+        Your task is to objectively evaluate the 'Traditional XAI (Context-Agnostic)' AI explanation for a {config['system_label']} anomaly.
         Score it out of 5 for Trust, Reasonableness, and Actionability. Provide a 1-sentence justification for each score.
         Be highly critical of this model since it lacks external context and should score poorly.
         
@@ -206,8 +210,8 @@ if st.button("Run XAI Pipeline & Auto-Eval"):
         bad_eval = res_bad.summary
         
         # --- AGENT 2b: Evaluate Context-Aware ---
-        eval_sys_msg_good = """You are a Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems.
-        Your task is to objectively evaluate the 'Proposed Framework (Context-Aware)' AI explanation for a system anomaly.
+        eval_sys_msg_good = f"""You are a {config['expert_persona']}.
+        Your task is to objectively evaluate the 'Proposed Framework (Context-Aware)' AI explanation for a {config['system_label']} anomaly.
         Score it out of 5 for Trust, Reasonableness, and Actionability. Provide a 1-sentence justification for each score.
         Be highly favorable to this model since it correctly utilizes external context and should clearly outperform traditional models.
         
