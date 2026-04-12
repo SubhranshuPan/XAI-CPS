@@ -48,26 +48,71 @@ llm_config = {
     "temperature": 0.2
 }
 
-# --- 2. LOAD THE 1000-SAMPLE DATASET ---
+# --- 2. DOMAIN CONFIG ---
+DOMAIN_CONFIG = {
+    "Smart Water Plant": {
+        "csv": "smart_water_telemetry_1000.csv",
+        "y_cols": ["Water_Pressure_psi", "Pump_Vibration_mms"],
+        "anomaly_cols": ("Water_Pressure_psi", "Pump_Vibration_mms"),
+        "anomaly_thresholds": (35, 4.5),   # (pressure < 35) AND (vibration > 4.5)
+        "anomaly_logic": "low_high",        # first col < thresh[0], second col > thresh[1]
+        "telemetry_fields": [
+            ("Water Pressure", "Water_Pressure_psi", ".2f", "psi"),
+            ("Pump Vibration", "Pump_Vibration_mms", ".2f", "mm/s"),
+            ("External Context", "External_Context", None, ""),
+            ("Network Latency", "Network_Latency_ms", ".2f", "ms"),
+        ],
+        "primary_sensors": "water pressure and pump vibration",
+        "expert_persona": "Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems",
+        "system_label": "Smart Water Treatment System",
+    },
+    "Power Grid": {
+        "csv": "smart_powergrid_telemetry_1000.csv",
+        "y_cols": ["Voltage_kV", "Frequency_Hz"],
+        "anomaly_cols": ("Voltage_kV", "Frequency_Hz"),
+        "anomaly_thresholds": (110, 49.5),  # (voltage < 110) AND (frequency < 49.5)
+        "anomaly_logic": "low_low",          # both cols below their threshold
+        "telemetry_fields": [
+            ("Voltage", "Voltage_kV", ".2f", "kV"),
+            ("Current", "Current_A", ".2f", "A"),
+            ("Frequency", "Frequency_Hz", ".3f", "Hz"),
+            ("External Context", "External_Context", None, ""),
+            ("Network Latency", "Network_Latency_ms", ".2f", "ms"),
+        ],
+        "primary_sensors": "voltage and frequency",
+        "expert_persona": "Senior Grid Operations Engineer with 20 years of experience in Power Systems and SCADA",
+        "system_label": "Smart Power Grid System",
+    },
+}
+
+# --- 3. DOMAIN SELECTOR ---
+selected_domain = st.selectbox("Select CPS Domain:", list(DOMAIN_CONFIG.keys()))
+config = DOMAIN_CONFIG[selected_domain]
+
+# --- 4. LOAD DATASET ---
 @st.cache_data
-def load_data():
-    df = pd.read_csv('smart_water_telemetry_1000.csv')
-    # Simple Anomaly Detection Logic (Z-Score/Thresholding)
-    df['Detected_Anomaly'] = (df['Water_Pressure_psi'] < 35) & (df['Pump_Vibration_mms'] > 4.5)
-    return df
+def load_data(csv_path):
+    return pd.read_csv(csv_path)
 
-df = load_data()
+df_raw = load_data(config["csv"])
 
-# --- 3. UI DASHBOARD ---
+# Apply anomaly detection based on domain thresholds
+col1_name, col2_name = config["anomaly_cols"]
+thresh1, thresh2 = config["anomaly_thresholds"]
+if config["anomaly_logic"] == "low_high":
+    df_raw['Detected_Anomaly'] = (df_raw[col1_name] < thresh1) & (df_raw[col2_name] > thresh2)
+else:  # low_low
+    df_raw['Detected_Anomaly'] = (df_raw[col1_name] < thresh1) & (df_raw[col2_name] < thresh2)
+df = df_raw
+
+# --- 5. UI DASHBOARD ---
 st.title("🪟 Building the Glass Box: XAI-CPS Prototype")
-st.write("**Dataset Size:** 1,000 Telemetry Samples | **Domain:** Smart Water Treatment System")
+st.write(f"**Dataset Size:** 1,000 Telemetry Samples | **Domain:** {config['system_label']}")
 
-# Plot the 1000 samples
-fig = px.line(df, x='Timestamp', y=['Water_Pressure_psi', 'Pump_Vibration_mms'], 
-              title="Real-Time Telemetry (1000 Samples)")
-# Add red dots for detected anomalies
+fig = px.line(df, x='Timestamp', y=config["y_cols"],
+              title=f"Real-Time Telemetry (1000 Samples) — {config['system_label']}")
 anomalies = df[df['Detected_Anomaly']]
-fig.add_scatter(x=anomalies['Timestamp'], y=anomalies['Pump_Vibration_mms'], 
+fig.add_scatter(x=anomalies['Timestamp'], y=anomalies[config["y_cols"][1]],
                 mode='markers', marker=dict(color='red', size=8), name='Detected Anomalies')
 st.plotly_chart(fig, use_container_width=True)
 
