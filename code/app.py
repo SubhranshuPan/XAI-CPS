@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import autogen
 from autogen import AssistantAgent, UserProxyAgent
+import os
 
 # --- 1. SETUP & CONFIG ---
 st.set_page_config(page_title="Glass Box XAI", layout="wide")
@@ -48,10 +49,12 @@ llm_config = {
     "temperature": 0.2
 }
 
+_DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- 2. DOMAIN CONFIG ---
 DOMAIN_CONFIG = {
     "Smart Water Plant": {
-        "csv": "smart_water_telemetry_1000.csv",
+        "csv": os.path.join(_DATA_DIR, "smart_water_telemetry_1000.csv"),
         "y_cols": ["Water_Pressure_psi", "Pump_Vibration_mms"],
         "anomaly_cols": ("Water_Pressure_psi", "Pump_Vibration_mms"),
         "anomaly_thresholds": (35, 4.5),   # (pressure < 35) AND (vibration > 4.5)
@@ -67,7 +70,7 @@ DOMAIN_CONFIG = {
         "system_label": "Smart Water Treatment System",
     },
     "Power Grid": {
-        "csv": "smart_powergrid_telemetry_1000.csv",
+        "csv": os.path.join(_DATA_DIR, "smart_powergrid_telemetry_1000.csv"),
         "y_cols": ["Voltage_kV", "Frequency_Hz"],
         "anomaly_cols": ("Voltage_kV", "Frequency_Hz"),
         "anomaly_thresholds": (110, 49.5),  # (voltage < 110) AND (frequency < 49.5)
@@ -119,7 +122,7 @@ st.plotly_chart(fig, use_container_width=True)
 st.subheader("🚨 Detected Anomalous Events")
 st.dataframe(anomalies)
 
-# --- 4. MULTI-AGENT XAI TRIGGER ---
+# --- 6. MULTI-AGENT XAI TRIGGER ---
 st.markdown("---")
 st.write("### Run Multi-Agent Analysis & Expert Evaluation")
 
