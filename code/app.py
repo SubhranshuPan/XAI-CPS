@@ -95,15 +95,15 @@ def load_data(csv_path):
     return pd.read_csv(csv_path)
 
 df_raw = load_data(config["csv"])
+df = df_raw.copy()
 
 # Apply anomaly detection based on domain thresholds
 col1_name, col2_name = config["anomaly_cols"]
 thresh1, thresh2 = config["anomaly_thresholds"]
 if config["anomaly_logic"] == "low_high":
-    df_raw['Detected_Anomaly'] = (df_raw[col1_name] < thresh1) & (df_raw[col2_name] > thresh2)
+    df['Detected_Anomaly'] = (df[col1_name] < thresh1) & (df[col2_name] > thresh2)
 else:  # low_low
-    df_raw['Detected_Anomaly'] = (df_raw[col1_name] < thresh1) & (df_raw[col2_name] < thresh2)
-df = df_raw
+    df['Detected_Anomaly'] = (df[col1_name] < thresh1) & (df[col2_name] < thresh2)
 
 # --- 5. UI DASHBOARD ---
 st.title("🪟 Building the Glass Box: XAI-CPS Prototype")
