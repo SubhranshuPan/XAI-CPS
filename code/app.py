@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import autogen
 from autogen import AssistantAgent, UserProxyAgent
+import os
 
 # --- 1. SETUP & CONFIG ---
 st.set_page_config(page_title="Glass Box XAI", layout="wide")
@@ -240,34 +241,84 @@ llm_config = {
     "temperature": 0.2
 }
 
-# --- 2. LOAD THE 1000-SAMPLE DATASET ---
+_DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# --- 2. DOMAIN CONFIG ---
+DOMAIN_CONFIG = {
+    "Smart Water Plant": {
+        "csv": os.path.join(_DATA_DIR, "smart_water_telemetry_1000.csv"),
+        "y_cols": ["Water_Pressure_psi", "Pump_Vibration_mms"],
+        "anomaly_cols": ("Water_Pressure_psi", "Pump_Vibration_mms"),
+        "anomaly_thresholds": (35, 4.5),   # (pressure < 35) AND (vibration > 4.5)
+        "anomaly_logic": "low_high",        # first col < thresh[0], second col > thresh[1]
+        "telemetry_fields": [
+            ("Water Pressure", "Water_Pressure_psi", ".2f", "psi"),
+            ("Pump Vibration", "Pump_Vibration_mms", ".2f", "mm/s"),
+            ("External Context", "External_Context", None, ""),
+            ("Network Latency", "Network_Latency_ms", ".2f", "ms"),
+        ],
+        "primary_sensors": "water pressure and pump vibration",
+        "expert_persona": "Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems",
+        "system_label": "Smart Water Treatment System",
+    },
+    "Power Grid": {
+        "csv": os.path.join(_DATA_DIR, "smart_powergrid_telemetry_1000.csv"),
+        "y_cols": ["Voltage_kV", "Frequency_Hz"],
+        "anomaly_cols": ("Voltage_kV", "Frequency_Hz"),
+        "anomaly_thresholds": (110, 49.5),  # (voltage < 110) AND (frequency < 49.5)
+        "anomaly_logic": "low_low",          # both cols below their threshold
+        "telemetry_fields": [
+            ("Voltage", "Voltage_kV", ".2f", "kV"),
+            ("Current", "Current_A", ".2f", "A"),
+            ("Frequency", "Frequency_Hz", ".3f", "Hz"),
+            ("External Context", "External_Context", None, ""),
+            ("Network Latency", "Network_Latency_ms", ".2f", "ms"),
+        ],
+        "primary_sensors": "voltage and frequency",
+        "expert_persona": "Senior Grid Operations Engineer with 20 years of experience in Power Systems and SCADA",
+        "system_label": "Smart Power Grid System",
+    },
+}
+
+# --- 3. DOMAIN SELECTOR ---
+selected_domain = st.selectbox("Select CPS Domain:", list(DOMAIN_CONFIG.keys()))
+config = DOMAIN_CONFIG[selected_domain]
+
+# --- 4. LOAD DATASET ---
 @st.cache_data
-def load_data():
-    df = pd.read_csv('smart_water_telemetry_1000.csv')
-    df['Detected_Anomaly'] = (df['Water_Pressure_psi'] < 35) & (df['Pump_Vibration_mms'] > 4.5)
-    return df
+def load_data(csv_path):
+    return pd.read_csv(csv_path)
 
-df = load_data()
+df_raw = load_data(config["csv"])
+df = df_raw.copy()
 
-# --- 3. UI DASHBOARD ---
+# Apply anomaly detection based on domain thresholds
+col1_name, col2_name = config["anomaly_cols"]
+thresh1, thresh2 = config["anomaly_thresholds"]
+if config["anomaly_logic"] == "low_high":
+    df['Detected_Anomaly'] = (df[col1_name] < thresh1) & (df[col2_name] > thresh2)
+else:  # low_low
+    df['Detected_Anomaly'] = (df[col1_name] < thresh1) & (df[col2_name] < thresh2)
+
+# --- 5. UI DASHBOARD ---
 st.title("🪟 Building the Glass Box: XAI-CPS Prototype")
-st.write("**Dataset Size:** 1,000 Telemetry Samples  ·  **Domain:** Smart Water Treatment System")
+st.write(f"**Dataset Size:** 1,000 Telemetry Samples | **Domain:** {config['system_label']}")
 
-# Plot the 1000 samples
-fig = px.line(df, x='Timestamp', y=['Water_Pressure_psi', 'Pump_Vibration_mms'],
-              title="Real-Time Telemetry (1000 Samples)")
+fig = px.line(df, x='Timestamp', y=config["y_cols"],
+              title=f"Real-Time Telemetry (1000 Samples) — {config['system_label']}")
 anomalies = df[df['Detected_Anomaly']]
-fig.add_scatter(x=anomalies['Timestamp'], y=anomalies['Pump_Vibration_mms'],
+fig.add_scatter(x=anomalies['Timestamp'], y=anomalies[config["y_cols"][1]],
                 mode='markers', marker=dict(color='red', size=8), name='Detected Anomalies')
 st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("🚨 Detected Anomalous Events")
 st.dataframe(anomalies)
 
-# --- 4. MULTI-AGENT XAI TRIGGER ---
+# --- 6. MULTI-AGENT XAI TRIGGER ---
 st.markdown("---")
 st.write("### Run Multi-Agent Analysis & Expert Evaluation")
 
+# Let user pick an anomaly to explain
 anomaly_options = [f"ID {idx} - {row['Timestamp']}" for idx, row in anomalies.iterrows()]
 selected_option = st.selectbox("Select an anomalous event to explain:", anomaly_options)
 
@@ -357,24 +408,29 @@ def format_eval_as_html(text, model_type=""):
 
 if st.button("🚀 Run XAI Pipeline & Auto-Eval"):
     with st.spinner("Agent 1 (Explainer) is analyzing the telemetry..."):
-
+        
+        # Extract the specific row data for the LLM
         selected_id = int(selected_option.split(" ")[1])
         row_data = df.loc[selected_id]
         selected_time = row_data['Timestamp']
-
-        telemetry_prompt = f"""
-        Anomaly detected at {selected_time} (Event ID: {selected_id}).
-        - Water Pressure: {row_data['Water_Pressure_psi']:.2f} psi
-        - Pump Vibration: {row_data['Pump_Vibration_mms']:.2f} mm/s
-        - External Context: {row_data['External_Context']}
-        - Network Latency: {row_data['Network_Latency_ms']:.2f} ms
-        """
+        
+        # Build telemetry prompt dynamically from domain config
+        field_lines = []
+        for label, col, fmt, unit in config["telemetry_fields"]:
+            if fmt:
+                field_lines.append(f"        - {label}: {row_data[col]:{fmt}} {unit}")
+            else:
+                field_lines.append(f"        - {label}: {row_data[col]}")
+        telemetry_prompt = (
+            f"        Anomaly detected at {selected_time} (Event ID: {selected_id}).\n"
+            + "\n".join(field_lines)
+        )
 
         # --- AGENT 1a: Context-Agnostic Explainer ---
-        agnostic_sys_msg = """You are an Explainable AI system for a Cyber-Physical System.
+        agnostic_sys_msg = f"""You are an Explainable AI system for a Cyber-Physical System.
         Your task is to provide a context-agnostic explanation for the provided anomaly.
-        Use ONLY the internal pressure and vibration data. Assume a mechanical failure.
-
+        Use ONLY the internal {config['primary_sensors']} data. Assume a mechanical failure.
+        
         You MUST format your response EXACTLY as bullet points like this (each on its own line):
 
         **Anomaly Analysis:** [1-sentence summary of the anomaly]
@@ -385,19 +441,19 @@ if st.button("🚀 Run XAI Pipeline & Auto-Eval"):
 
         **Recommended Action:** [1-sentence suggested repair or investigation step]
         """
-
+        
         explainer_bad = AssistantAgent(name="Explainer_Bad", system_message=agnostic_sys_msg, llm_config=llm_config)
         proxy_explainer_bad = UserProxyAgent(name="Proxy_Explainer_Bad", human_input_mode="NEVER", max_consecutive_auto_reply=0, code_execution_config=False)
-
+        
         agnostic_prompt = f"Please provide a context-agnostic explanation for this anomaly:\n\n{telemetry_prompt}"
         res_bad_exp = proxy_explainer_bad.initiate_chat(explainer_bad, message=agnostic_prompt, clear_history=True)
         bad_exp = res_bad_exp.summary
 
         # --- AGENT 1b: Context-Aware Explainer ---
-        aware_sys_msg = """You are an Explainable AI system for a Cyber-Physical System.
-        Your task is to provide a context-aware explanation for the provided anomaly.
+        aware_sys_msg = f"""You are an Explainable AI system for a Cyber-Physical System.
+        Your task is to provide a context-aware explanation for the provided anomaly in a {config['system_label']}.
         Link the internal sensor failures to the External Context and Network Latency.
-
+        
         You MUST format your response EXACTLY as bullet points like this (each on its own line):
 
         **Anomaly Analysis:** [1-sentence summary of the anomaly]
@@ -410,32 +466,32 @@ if st.button("🚀 Run XAI Pipeline & Auto-Eval"):
 
         **Recommended Action:** [1-sentence actionable next step]
         """
-
+        
         explainer_good = AssistantAgent(name="Explainer_Good", system_message=aware_sys_msg, llm_config=llm_config)
         proxy_explainer_good = UserProxyAgent(name="Proxy_Explainer_Good", human_input_mode="NEVER", max_consecutive_auto_reply=0, code_execution_config=False)
-
+        
         aware_prompt = f"Please provide a context-aware explanation for this anomaly using all provided data:\n\n{telemetry_prompt}"
         res_good_exp = proxy_explainer_good.initiate_chat(explainer_good, message=aware_prompt, clear_history=True)
         good_exp = res_good_exp.summary
 
     with st.spinner("Agent 2 (Expert Evaluator) is scoring the outputs..."):
-
+        
         # --- AGENT 2a: Evaluate Context-Agnostic ---
-        eval_sys_msg_bad = """You are a Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems.
-        Your task is to objectively evaluate the 'Traditional XAI (Context-Agnostic)' AI explanation for a system anomaly.
+        eval_sys_msg_bad = f"""You are a {config['expert_persona']}.
+        Your task is to objectively evaluate the 'Traditional XAI (Context-Agnostic)' AI explanation for a {config['system_label']} anomaly.
         Score it out of 5 for Trust, Reasonableness, and Actionability. Provide a 1-sentence justification for each score.
         Evaluate fairly — acknowledge strengths where they exist, but note that this model only uses internal sensor data
         and lacks external context (environmental conditions, network latency), which limits how complete its diagnosis can be.
         Typical scores for a context-agnostic model range from 1 to 3 depending on quality.
-
+        
         You MUST strictly format your output exactly like this (each on its own line, with blank lines between):
-
+        
         **Model Type:** Traditional XAI (Context-Agnostic)
-
+        
         **Trust:** [Score]/5 - [1-sentence justification]
-
+        
         **Reasonableness:** [Score]/5 - [1-sentence justification]
-
+        
         **Actionability:** [Score]/5 - [1-sentence justification]
         """
         evaluator_bad = autogen.AssistantAgent(name="Evaluator_Bad", system_message=eval_sys_msg_bad, llm_config=llm_config)
@@ -443,24 +499,24 @@ if st.button("🚀 Run XAI Pipeline & Auto-Eval"):
         eval_prompt_bad = f"Please read the following explanation generated by an AI, and evaluate its Trust, Reasonableness, and Actionability as instructed.\n\n### EXPLANATION TO EVALUATE:\n{bad_exp}\n\n### INSTRUCTIONS:\nProvide the evaluation scores strictly in the requested format."
         res_bad = proxy_bad.initiate_chat(evaluator_bad, message=eval_prompt_bad)
         bad_eval = res_bad.summary
-
+        
         # --- AGENT 2b: Evaluate Context-Aware ---
-        eval_sys_msg_good = """You are a Senior Facility Manager with 20 years of experience in Smart Water Treatment and IoT systems.
-        Your task is to objectively evaluate the 'Proposed Framework (Context-Aware)' AI explanation for a system anomaly.
+        eval_sys_msg_good = f"""You are a {config['expert_persona']}.
+        Your task is to objectively evaluate the 'Proposed Framework (Context-Aware)' AI explanation for a {config['system_label']} anomaly.
         Score it out of 5 for Trust, Reasonableness, and Actionability. Provide a 1-sentence justification for each score.
         Evaluate fairly — this model uses both internal sensor data and external context (environmental conditions, network latency),
         which should improve diagnostic quality. However, no model is perfect — note areas where the explanation could still
         be improved, such as suggesting additional data sources, quantifying confidence, or providing more specific remediation steps.
         Typical scores for a good context-aware model range from 3 to 4, with 5 reserved only for exceptional quality.
-
+        
         You MUST strictly format your output exactly like this (each on its own line, with blank lines between):
-
+        
         **Model Type:** Proposed Framework (Context-Aware)
-
+        
         **Trust:** [Score]/5 - [1-sentence justification]
-
+        
         **Reasonableness:** [Score]/5 - [1-sentence justification]
-
+        
         **Actionability:** [Score]/5 - [1-sentence justification]
         """
         evaluator_good = autogen.AssistantAgent(name="Evaluator_Good", system_message=eval_sys_msg_good, llm_config=llm_config)
