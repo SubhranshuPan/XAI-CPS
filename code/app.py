@@ -1,7 +1,11 @@
+# pyrefly: ignore [missing-import]
 import streamlit as st
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import plotly.express as px
+# pyrefly: ignore [missing-import]
 import autogen
+# pyrefly: ignore [missing-import]
 from autogen import AssistantAgent, UserProxyAgent
 import os
 
@@ -236,27 +240,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- LLM CONFIG (Cloud-compatible via Streamlit Secrets) ---
-# For Streamlit Cloud, configure secrets in the app dashboard:
-#   [llm]
-#   model = "llama-3.3-70b-versatile"
-#   base_url = "https://api.groq.com/openai/v1"
-#   api_key = "gsk_YOUR_GROQ_API_KEY"
-#
-# For local development with Ollama, omit secrets or set them to local values.
-
-if "llm" in st.secrets:
-    _model = st.secrets["llm"]["model"]
-    _base_url = st.secrets["llm"]["base_url"]
-    _api_key = st.secrets["llm"]["api_key"]
-else:
-    # Fallback to local Ollama for development
-    _model = "llama3.2"
-    _base_url = "http://localhost:11434/v1"
-    _api_key = "ollama"
-
 llm_config = {
-    "config_list": [{"model": _model, "base_url": _base_url, "api_key": _api_key}],
+    "config_list": [{"model": "llama3.2", "base_url": "http://localhost:11434/v1", "api_key": "ollama"}],
     "temperature": 0.2
 }
 
