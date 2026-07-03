@@ -133,25 +133,25 @@ The system employs a modular multi-agent architecture with reusable helper funct
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   Streamlit Dashboard                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐ │
-│  │ Domain       │  │ Single-Event │  │ Batch Evaluation  │ │
-│  │ Selector     │  │ Analysis     │  │ Pipeline          │ │
-│  └──────────────┘  └──────┬───────┘  └────────┬──────────┘ │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐  │
+│  │ Domain       │  │ Single-Event │  │ Batch Evaluation  │  │
+│  │ Selector     │  │ Analysis     │  │ Pipeline          │  │
+│  └──────────────┘  └──────┬───────┘  └────────┬──────────┘  │
 │                           │                    │            │
 │              ┌────────────┴────────────────────┘            │
 │              ▼                                              │
 │  ┌───────────────────────────────────────────────┐          │
-│  │         Reusable Agent Helper Functions        │          │
-│  │  build_telemetry_prompt()                      │          │
-│  │  run_explainer_agnostic() / _aware()           │          │
-│  │  run_evaluator_agnostic() / _aware()           │          │
-│  │  parse_scores()                                │          │
+│  │         Reusable Agent Helper Functions       │          │
+│  │  build_telemetry_prompt()                     │          │
+│  │  run_explainer_agnostic() / _aware()          │          │
+│  │  run_evaluator_agnostic() / _aware()          │          │
+│  │  parse_scores()                               │          │
 │  └────────────────────┬──────────────────────────┘          │
 │                       ▼                                     │
 │  ┌─────────────────────────────────────────────┐            │
-│  │    Microsoft AutoGen Multi-Agent System      │            │
+│  │    Microsoft AutoGen Multi-Agent System     │            │
 │  │  ┌──────────────┐  ┌────────────────────┐   │            │
-│  │  │ Explainer    │  │ Expert Evaluator    │   │            │
+│  │  │ Explainer    │  │ Expert Evaluator   │   │            │
 │  │  │ Agents (×2)  │  │ Agents (×2)        │   │            │
 │  │  └──────┬───────┘  └────────┬───────────┘   │            │
 │  │         └───────────┬───────┘               │            │
