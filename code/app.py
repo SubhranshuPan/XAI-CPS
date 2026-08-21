@@ -474,7 +474,7 @@ def run_evaluator_agnostic(bad_exp, config):
     Score it out of 5 for Trust, Reasonableness, and Actionability. Provide a 1-sentence justification for each score.
     Evaluate fairly — acknowledge strengths where they exist, but note that this model only uses internal sensor data
     and lacks external context (environmental conditions, network latency), which limits how complete its diagnosis can be.
-    Typical scores for a context-agnostic model range from 1 to 3 depending on quality.
+    Typical scores for a context-agnostic model range from 1 to 2.5 depending on quality.
 
     You MUST strictly format your output exactly like this (each on its own line, with blank lines between):
 
